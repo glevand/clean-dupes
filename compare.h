@@ -10,13 +10,18 @@
 #include "hash-table.h"
 #include "work-queue.h"
 
-void compare_files(struct work_queue *wq, struct hash_table *ht,
-	bool (*check_for_signals)(void), FILE *dupes_fp, FILE *unique_fp);
-
-struct compare_result {
-	unsigned int total_count;
-	unsigned int unique_count;
-	unsigned int dupe_count;
+struct compare_file_pointers {
+	FILE *dupes;
+	FILE *unique;
 };
+
+struct compare_counts {
+	unsigned int total;
+	unsigned int dupes;
+	unsigned int unique;
+};
+
+void compare_files(struct work_queue *wq, struct hash_table *ht,
+	bool (*check_for_signals)(void), struct compare_file_pointers *fps);
 
 #endif /* _FIND_DUPES_H */

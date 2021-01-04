@@ -15,6 +15,7 @@ struct hash_table_entry {
 };
 
 struct hash_table {
+	struct list extras;
 	unsigned int count;
 	struct list array[];
 };
@@ -25,6 +26,8 @@ void hash_table_entry_init(struct hash_table_entry *hte, struct list *list,
 
 void hash_table_insert(struct hash_table *ht, unsigned int index,
 	struct hash_table_entry *hte);
+void hash_table_insert_extra(struct hash_table *ht,
+	struct hash_table_entry *hte);
 void hash_table_remove(struct hash_table_entry *hte);
 
 struct hash_table_entry *hash_table_find_first(struct hash_table *ht,
@@ -32,7 +35,7 @@ struct hash_table_entry *hash_table_find_first(struct hash_table *ht,
 struct hash_table_entry *hash_table_find_next(
 	struct hash_table_entry *hte);
 
-typedef int (*hash_table_for_each_list_cb)(void *cb_data,
+typedef bool (*hash_table_for_each_list_cb)(void *cb_data,
 	const struct list *list);
 
 int hash_table_for_each_list(const struct hash_table *ht,

@@ -41,7 +41,7 @@ void work_queue_init(struct work_queue *wq, unsigned int thread_count)
 	result = sem_init(&wq->work_ready, 0, 0);
 
 	if (result) {
-		on_error("sem_init");
+		on_error("sem_init.\n");
 	}
 
 	wq->thread_pool = thread_pool_init(thread_count,
@@ -119,7 +119,7 @@ struct work_item *work_queue_get_item(struct work_queue *wq)
 	le = list_get_first(&wq->ready_list);
 
 	if (!le) {
-		on_error("ready_list empty");
+		on_error("ready_list empty.\n");
 	}
 	
 	wi = list_entry(le, struct work_item, list_entry, &wq->ready_list);
@@ -144,9 +144,17 @@ void work_queue_empty_ready_list(struct work_queue *wq)
 	struct work_item *wi_safe;
 	struct work_item *wi;
 
+	if (!list_is_empty(&wq->ready_list)) {
+		debug("ready_list not empty.\n");
+	}
+
 	list_for_each_safe(&wq->ready_list, wi, wi_safe, list_entry) {
 		list_remove(&wi->list_entry);
 		mem_free(wi);
+	}
+
+	if (!list_is_empty(&wq->ready_list)) {
+		on_error("ready_list not empty.\n");
 	}
 }
 

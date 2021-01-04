@@ -126,9 +126,17 @@ void  __attribute__ ((unused)) debug_raw(const char *fmt, ...)
 	va_end(ap);
 }
 
-void on_error(const char *msg)
+void _on_error(const char *file, const char *func, int line, const char *fmt, ...)
 {
-	fprintf(stderr, "%s: ERROR: %s failed.\n", __func__, msg);
+	va_list ap;
+
+	va_start(ap, fmt);
+
+	fprintf(stderr, "%s:%s:%d: ERROR: ", file, func, line);
+	vfprintf(stderr, fmt, ap);
+	fflush(stderr);
+
+	va_end(ap);
 	assert(0);
 	exit(EXIT_FAILURE);
 }
