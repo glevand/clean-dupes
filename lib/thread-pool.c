@@ -67,7 +67,7 @@ struct thread_pool *thread_pool_init(unsigned int count,
 		tp_debug("th%u: created\n", tpe->id);
 
 		if (result) {
-			on_error("pthread_create");
+			on_error("pthread_create.\n");
 		}
 	}
 
@@ -99,7 +99,7 @@ void thread_pool_delete(struct thread_pool *tp)
 			thread_result, (unsigned long)thread_result);
 
 		if (result) {
-			on_error("pthread_join");
+			on_error("pthread_join.\n");
 		}
 	}
 

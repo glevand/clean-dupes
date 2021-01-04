@@ -26,24 +26,24 @@ struct list_file_data {
 	unsigned int list_entry_max;
 };
 
-static int list_file_print_cb(void *cb_data, const struct list *list)
+static bool list_file_print_cb(void *cb_data, const struct list *list)
 {
 	struct list_file_data *pfl_data = cb_data;
 	struct hash_table_entry *hte;
-	unsigned int list_entry = 0;
+	unsigned int counter = 0;
 
 	list_for_each(list, hte, list_entry) {
 		struct file_data *data;
 
-		list_entry++;
+		counter++;
 		pfl_data->file_counter++;
 
 		data = (struct file_data *)hte->data;
 		fprintf(pfl_data->list_fp, "%lu %s\n", hte->key, data->name);
 	}
 
-	pfl_data->list_entry_max = (list_entry > pfl_data->list_entry_max)
-		? list_entry : pfl_data->list_entry_max;
+	pfl_data->list_entry_max = (counter > pfl_data->list_entry_max)
+		? counter : pfl_data->list_entry_max;
 
 	return false;
 }

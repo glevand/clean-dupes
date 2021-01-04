@@ -31,8 +31,7 @@
 struct compare_files_cb_data {
 	const struct list *ht_list;
 	bool (*check_for_signals)(void);
-	FILE *dupes_fp;
-	FILE *unique_fp;
+	struct compare_file_pointers *fps;
 };
 
 struct dupe_buffer {
@@ -73,9 +72,14 @@ static int compare_files_cb(struct work_item *wi)
 	struct compare_files_cb_data *cbd = wi->cb_data;
 	struct hash_table_entry *hte_1;
 	struct hash_table_entry *hte_safe;
-	struct compare_result *compare_result = wi->result;
+	struct compare_counts *compare_result = wi->result;
 	int result = 0;
 	unsigned int i;
+
+	if (cbd->check_for_signals()) {
+		result = -1;
+		goto exit;
+	}
 
 	i = 1;
 	cp_debug("=== wi-%u ===\n", wi->id);
@@ -95,7 +99,7 @@ static int compare_files_cb(struct work_item *wi)
 		};
 		struct file_data *data_1;
 
-		compare_result->total_count++;
+		compare_result->total++;
 
 		data_1 = (struct file_data *)hte_1->data;
 
@@ -151,27 +155,28 @@ static int compare_files_cb(struct work_item *wi)
 		}
 
 		if (cbd->check_for_signals()) {
-			debug("exit on signal\n");
+			//debug("exit on signal\n");
 			result = -1;
 			goto exit;
 		}
 
 		if (!match_counter) {
 			assert(!d_buf.buf);
-			compare_result->unique_count++;
-			fprintf(cbd->unique_fp, "%s\n", data_1->name);
+			compare_result->unique++;
+			fprintf(cbd->fps->unique, "%s\n", data_1->name);
 		} else {
 			size_t result;
 
 			cp_debug("found %u dupes\n", match_counter);
 
-			compare_result->dupe_count += match_counter;
+			compare_result->dupes += match_counter;
 
 			assert(d_buf.buf);
 			*(d_buf.buf + d_buf.len) = '\n';
 			d_buf.len++;
 
-			result = fwrite(d_buf.buf, 1, d_buf.len, cbd->dupes_fp);
+			result = fwrite(d_buf.buf, 1, d_buf.len,
+				cbd->fps->dupes);
 
 			if (result != d_buf.len) {
 				log("ERROR: fwrite failed: %s\n",
@@ -196,19 +201,19 @@ exit:
 	return result;
 }
 
+
 static void compare_files_queue_work(unsigned int id, struct work_queue *wq,
-	bool (*check_for_signals)(void), FILE *dupes_fp, FILE *unique_fp,
+	bool (*check_for_signals)(void), struct compare_file_pointers *fps,
 	const struct list *ht_list)
 {
 	struct compare_files_cb_data *cbd;
 	struct work_item *wi;
 
 	wi = mem_alloc_zero(sizeof(*wi) + sizeof(*cbd)
-		+ sizeof(struct compare_result));
+		+ sizeof(struct compare_counts));
 
 	cbd = wi->cb_data = (void*)(wi + 1);
-	cbd->dupes_fp = dupes_fp;
-	cbd->unique_fp = unique_fp;
+	cbd->fps = fps;
 	cbd->check_for_signals = check_for_signals;
 	cbd->ht_list = ht_list;
 
@@ -221,13 +226,13 @@ static void compare_files_queue_work(unsigned int id, struct work_queue *wq,
 }
 
 void compare_files(struct work_queue *wq, struct hash_table *ht,
-	bool (*check_for_signals)(void), FILE *dupes_fp, FILE *unique_fp)
+	bool (*check_for_signals)(void), struct compare_file_pointers *fps)
 {
 	unsigned int i;
 
 	for (i = 0; i < ht->count; i++) {
 		//debug("queue list[%u]\n", i);
-		compare_files_queue_work(i, wq, check_for_signals, dupes_fp,
-			unique_fp, &(ht->array[i]));
+		compare_files_queue_work(i, wq, check_for_signals, fps,
+			&(ht->array[i]));
 	}
 }

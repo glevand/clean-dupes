@@ -20,6 +20,8 @@ void __attribute__ ((unused, format (printf, 1, 2))) debug_raw(const char *fmt, 
 void set_debug_on(bool b);
 bool get_debug_on(void);
 
-void on_error(const char *msg);
+void __attribute__ ((format (printf, 4, 5))) _on_error(const char *file,
+	const char *func, int line, const char *fmt, ...);
+#define on_error(_args...) do {_on_error(__FILE__, __func__, __LINE__, _args);} while(0)
 
 #endif /* _LIB_LOG_H */

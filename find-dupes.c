@@ -251,22 +251,22 @@ static void SIGTERM_handler(int signum)
 static bool check_for_signals(void)
 {
 	if (sig_events.term) {
-		debug("term\n");
+		//debug("term\n");
 		return true;
 	}
 
 	if (sig_events.alarm) {
 		sig_events.alarm = 0;
-		debug("alarm\n");
+		//debug("alarm\n");
 	}
 	return false;
 }
 
-static void print_file_header(FILE *fp)
+static void print_file_header(const char *str, FILE *fp)
 {
 	fprintf(fp, "# %s\n# ", version_string);
 	print_current_time(fp);
-	fprintf(fp, "\n\n");
+	fprintf(fp, "\n# %s\n\n", str);
 }
 
 static void print_result(const char *result, const struct timer *timer)
@@ -278,53 +278,87 @@ static void print_result(const char *result, const struct timer *timer)
 	fprintf(stderr, "find-dupes: Done: %s, %s.\n\n", result, str);
 }
 
-static void clean_compare_queue(struct work_queue *wq)
+static void empty_list_print(struct list *empty_list, FILE *fp, bool size)
 {
-	struct compare_result totals = {0};
-	struct work_item *wi_safe;
+	struct hash_table_entry *hte;
+
+	list_for_each(empty_list, hte, list_entry) {
+		struct file_data *data = (struct file_data *)hte->data;
+
+		fprintf(fp, "%s%s\n", (size ? "0 " : ""), data->name);
+	}
+}
+
+static void empty_list_clean(struct list *empty_list)
+{
+	struct hash_table_entry *hte;
+	struct hash_table_entry *hte_safe;
+
+	list_for_each_safe(empty_list, hte, hte_safe, list_entry) {
+		file_table_entry_clean(hte);
+	}
+}
+
+static void compare_queue_print(struct work_queue *wq, unsigned int empty_count)
+{
+	struct compare_counts totals = {0};
 	struct work_item *wi;
-	bool error = false;
 
-	list_for_each(&wq->ready_list, wi, list_entry) {
-		log("ready_list: wi = %u\n", wi->id);
-		error = true;
+// 	list_for_each(&wq->ready_list, wi, list_entry) {
+// 		log("ready_list: wi = %u\n", wi->id);
+// 	}
+
+	if (list_is_empty(&wq->ready_list)) {
+		on_error("ready_list not empty.\n");
 	}
 
-	if (error) {
-		on_error("ready_list not empty");
-	}
-
-	list_for_each_safe(&wq->done_list, wi, wi_safe, list_entry) {
-		struct compare_result *result;
+	list_for_each(&wq->done_list, wi, list_entry) {
+		struct compare_counts *result;
 
 		assert(wi->result);
 		result = wi->result;
 
 		if (0) {
-			debug("wi-%u result: total = %u, unique = %u, dupe = %u\n",
-				wi->id, result->total_count,
-				result->unique_count,	result->dupe_count);
+			debug("wi-%u result: total = %u, dupe = %u, unique = %u\n",
+				wi->id, result->total, result->dupes,
+				result->unique);
 		}
 
-		totals.total_count += result->total_count;
-		totals.unique_count += result->unique_count;
-		totals.dupe_count += result->dupe_count;
-
-		mem_free(wi);
+		totals.total += result->total;
+		totals.dupes += result->dupes;
+		totals.unique += result->unique;
 	}
 
-	//debug("Processed %u files.\n", totals.total_count);
+	//debug("Processed %u files.\n", totals.total);
 
-	fprintf(stderr, "find-dupes: Found %u unique files, %u duplicate files.\n",
-		totals.unique_count, totals.dupe_count);
+	fprintf(stderr, "find-dupes: Found %u unique files, %u duplicate files, %u empty files.\n",
+		totals.unique, totals.dupes, empty_count);
+}
+
+static void compare_queue_clean(struct work_queue *wq)
+{
+	struct work_item *wi_safe;
+	struct work_item *wi;
+
+// 	list_for_each(&wq->ready_list, wi, list_entry) {
+// 		log("ready_list: wi = %u\n", wi->id);
+// 	}
+
+	if (!list_is_empty(&wq->ready_list)) {
+		on_error("ready_list not empty.\n");
+	}
+
+	list_for_each_safe(&wq->done_list, wi, wi_safe, list_entry) {
+		mem_free(wi);
+	}
 }
 
 int main(int argc, char *argv[])
 {
+	struct src_dir *sd_safe;
+	struct src_dir *sd;
 	struct work_queue *wq;
 	struct hash_table *ht;
-	struct src_dir *sd;
-	struct src_dir *sd_safe;
 	struct timer timer;
 	struct opts opts;
 	unsigned int i;
@@ -406,6 +440,7 @@ int main(int argc, char *argv[])
 		ht = hash_table_init(1024UL * opts.buckets);
 		wq = work_queue_alloc(opts.jobs);
 	} else {
+		debug("jobs = 1, hash count = 10\n");
 		ht = hash_table_init(10);
 		wq = work_queue_alloc(1);
 	}
@@ -420,8 +455,7 @@ int main(int argc, char *argv[])
 			debug("find_files failed: '%s', %d\n", sd->path, result);
 			goto exit_clean;
 		}
-
-		debug("find_files OK: '%s'\n", sd->path);
+		//debug("find_files OK: '%s'\n", sd->path);
 	}
 
 	list_for_each_safe(&opts.src_dir_list, sd, sd_safe, list_entry) {
@@ -429,65 +463,95 @@ int main(int argc, char *argv[])
 		mem_free(sd);
 	}
 
-	i = 1;
+	i = 0;
 	while (!list_is_empty(&wq->ready_list)) {
-		debug("find wait %u\n", i++);
-		sleep(1);
+		i++;
 		if (check_for_signals()) {
-			debug("exit on signal\n");
-			work_queue_empty_ready_list(wq);
-			goto exit_clean;
+			debug("find wait %u (got signal)\n", i);
+			sleep(1);
+		} else {
+			debug("find wait %u\n", i);
+			sleep(1);
 		}
 	}
 
+	if (check_for_signals()) {
+		debug("find signal cleanup\n");
+		work_queue_empty_ready_list(wq);
+		result = -1;
+		goto exit_clean;
+	}
+
+	if (1) {
+		FILE *empty_fp = list_file_open(opts.list_dir, "/empty.lst");
+
+		print_file_header("Empty List", empty_fp);
+		empty_list_print(&ht->extras, empty_fp, false);
+
+		fclose(empty_fp);
+	}
+
 	if (opts.file_list == opt_yes) {
-		FILE *files_fp;
+		FILE *files_fp = list_file_open(opts.list_dir, "/files.lst");
 
-		files_fp = list_file_open(opts.list_dir, "/files.lst");
-		print_file_header(files_fp);
+		print_file_header("Files List", files_fp);
 
+		empty_list_print(&ht->extras, files_fp, true);
 		result = list_file_print(ht, files_fp);
 
-		fclose(files_fp);
-
 		if (result) {
+			fclose(files_fp);
 			goto exit_clean;
 		}
 	}
 
 	if (1) {
-		FILE *dupes_fp;
-		FILE *unique_fp;
+		struct compare_file_pointers fps;
+		unsigned int empty_count;
 
 		fprintf(stderr, "find-dupes: Comparing %lu files...\n",
 			file_count(ht));
 
-		dupes_fp = list_file_open(opts.list_dir, "/dupes.lst");
-		print_file_header(dupes_fp);
+		fps.dupes = list_file_open(opts.list_dir, "/dupes.lst");
+		print_file_header("Dupes List", fps.dupes);
 
-		unique_fp = list_file_open(opts.list_dir, "/unique.lst");
-		print_file_header(unique_fp);
+		fps.unique = list_file_open(opts.list_dir, "/unique.lst");
+		print_file_header("Unique List", fps.unique);
 
-		compare_files(wq, ht, check_for_signals, dupes_fp, unique_fp);
+		compare_files(wq, ht, check_for_signals, &fps);
 
-		i = 1;
+		i = 0;
 		while (!list_is_empty(&wq->ready_list)) {
-			//debug("dupes wait %u\n", i++);
-			sleep(1);
+			i++;
 			if (check_for_signals()) {
-				debug("exit on signal\n");
-				work_queue_empty_ready_list(wq);
-				break;
+				debug("compare wait %u (got signal)\n", i);
+				sleep(1);
+			} else {
+				debug("compare wait %u\n", i);
+				sleep(6);
 			}
 		}
 
-		fclose(dupes_fp);
-		fclose(unique_fp);
+		fclose(fps.dupes);
+		fclose(fps.unique);
 
-		clean_compare_queue(wq);
+		if (check_for_signals()) {
+			debug("compare signal cleanup\n");
+			work_queue_empty_ready_list(wq);
+			result = -1;
+			goto exit_clean;
+		}
+
+		empty_count = list_item_count(&ht->extras);
+		empty_list_clean(&ht->extras);
+
+		compare_queue_print(wq, empty_count);
 	}
 
 exit_clean:
+	debug("exit_clean\n");
+
+	compare_queue_clean(wq);
 	work_queue_delete(wq);
 
 	timer_stop(&timer);

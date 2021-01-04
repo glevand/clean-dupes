@@ -110,23 +110,23 @@ static off_t get_file_size_stat64(const char *file)
 	return st.st_size;
 }
 
-static int process_file(const char *file, struct hash_table *ht)
+static void process_file(const char *file, struct hash_table *ht)
 {
 	struct hash_table_entry *hte;
-	unsigned int index;
 	off_t size;
-
-	//debug("'%s'\n", file);
 
 	size = get_file_size_stat64(file);
 
-	index = hash_table_index(ht, (long int)size);
+	if (size) {
+		unsigned int index = hash_table_index(ht, (long int)size);
 
-	hte = ht_entry_init(file, (long int)size, &ht->array[index]);
-
-	hash_table_insert(ht, index, hte);
-
-	return 0;
+		hte = ht_entry_init(file, (long int)size, &ht->array[index]);
+		hash_table_insert(ht, index, hte);
+		//debug("index-%u: size = %ld, %s\n", index, (long int)size, file);
+	} else {
+		hte = ht_entry_init(file, (long int)size, &ht->extras);
+		hash_table_insert_extra(ht, hte);
+	}
 }
 
 struct find_files_cb_data {
@@ -205,7 +205,7 @@ int find_files(struct work_queue *wq, struct hash_table *ht,
 
 	for (id = 0; ; id++) {
 		if (check_for_signals()) {
-			debug("exit on signal\n");
+			//debug("exit on signal\n");
 			result = -1;
 			goto exit;
 		}
@@ -252,15 +252,9 @@ int find_files(struct work_queue *wq, struct hash_table *ht,
 				de->d_name);
 
 			//debug("DT_REG: %s\n", sub_path);
-			result = process_file(sub_path, ht);
-
+			process_file(sub_path, ht);
 			mem_free(sub_path);
 
-			if (result) {
-				log("ERROR: process_file '%s' failed: %s\n",
-					de->d_name, strerror(errno));
-				exit(EXIT_FAILURE);
-			}
 			break;
 		}
 		default:
@@ -279,7 +273,9 @@ unsigned long file_count(struct hash_table *ht)
 	unsigned long count;
 	unsigned int i;
 
-	for (count = 0, i = 0; i < ht->count; i++) {
+	count = list_item_count(&ht->extras);
+
+	for (i = 0; i < ht->count; i++) {
 		count += list_item_count(&(ht->array[i]));
 	}
 	return count;

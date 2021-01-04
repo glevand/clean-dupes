@@ -13,7 +13,13 @@ struct hash_table *hash_table_init(unsigned int count)
 	struct hash_table *ht;
 	unsigned int i;
 
+	if (count < 1) {
+		on_error("too small.\n");
+	}
+
 	ht = mem_alloc_zero(sizeof(*ht) + count * sizeof(ht->array[0]));
+
+	list_init(&ht->extras, "ht extras");
 
 	ht->count = count;
 
@@ -36,12 +42,22 @@ void hash_table_entry_init(struct hash_table_entry *hte, struct list *list,
 void hash_table_insert(struct hash_table *ht, unsigned int index,
 	struct hash_table_entry *hte)
 {
-	//debug("insert   %u@%lu => %p\n", index, entry->key, entry->data);
+	//debug("index-%u: %lu => %p\n", index, hte->key, hte->data);
 
 	assert(index < ht->count);
 	assert(hte->list_entry.list_mtx);
 
 	list_add_tail(&ht->array[index], &hte->list_entry);
+}
+
+void hash_table_insert_extra(struct hash_table *ht,
+	struct hash_table_entry *hte)
+{
+	//debug("%u@%lu => %p\n", hte->data);
+
+	assert(hte->list_entry.list_mtx);
+
+	list_add_tail(&ht->extras, &hte->list_entry);
 }
 
 void hash_table_remove(struct hash_table_entry *hte)
