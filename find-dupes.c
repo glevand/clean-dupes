@@ -262,11 +262,19 @@ static bool check_for_signals(void)
 	return false;
 }
 
-static void print_file_header(const char *str, FILE *fp)
+static void print_file_header(FILE *fp, const char *str)
 {
 	fprintf(fp, "# %s\n# ", version_string);
 	print_current_time(fp);
 	fprintf(fp, "\n# %s\n\n", str);
+}
+
+static void print_file_header_count(FILE *fp, const char *str,
+	unsigned int count)
+{
+	fprintf(fp, "# %s\n# ", version_string);
+	print_current_time(fp);
+	fprintf(fp, "\n# %s - %u files.\n\n", str, count);
 }
 
 static void print_result(const char *result, const struct timer *timer)
@@ -304,11 +312,10 @@ static void compare_queue_print(struct work_queue *wq, unsigned int empty_count)
 	struct compare_counts totals = {0};
 	struct work_item *wi;
 
-// 	list_for_each(&wq->ready_list, wi, list_entry) {
-// 		log("ready_list: wi = %u\n", wi->id);
-// 	}
-
-	if (list_is_empty(&wq->ready_list)) {
+	if (!list_is_empty(&wq->ready_list)) {
+		list_for_each(&wq->ready_list, wi, list_entry) {
+			log("ready_list: wi = %u\n", wi->id);
+		}
 		on_error("ready_list not empty.\n");
 	}
 
@@ -340,17 +347,36 @@ static void compare_queue_clean(struct work_queue *wq)
 	struct work_item *wi_safe;
 	struct work_item *wi;
 
-// 	list_for_each(&wq->ready_list, wi, list_entry) {
-// 		log("ready_list: wi = %u\n", wi->id);
-// 	}
-
 	if (!list_is_empty(&wq->ready_list)) {
+		list_for_each(&wq->ready_list, wi, list_entry) {
+			log("ready_list: wi = %u\n", wi->id);
+		}
 		on_error("ready_list not empty.\n");
 	}
 
 	list_for_each_safe(&wq->done_list, wi, wi_safe, list_entry) {
 		mem_free(wi);
 	}
+}
+
+static unsigned int get_sleep_time(unsigned int file_count)
+{
+	if (file_count < 15000) {
+		return 1;
+	}
+	if (file_count < 50000) {
+		return 2;
+	}
+	if (file_count < 100000) {
+		return 3;
+	}
+	if (file_count < 500000) {
+		return 4;
+	}
+	if (file_count < 1000000) {
+		return 5;
+	}
+	return 6;
 }
 
 int main(int argc, char *argv[])
@@ -485,7 +511,9 @@ int main(int argc, char *argv[])
 	if (1) {
 		FILE *empty_fp = list_file_open(opts.list_dir, "/empty.lst");
 
-		print_file_header("Empty List", empty_fp);
+		print_file_header_count(empty_fp, "Empty List",
+			list_item_count(&ht->extras));
+
 		empty_list_print(&ht->extras, empty_fp, false);
 
 		fclose(empty_fp);
@@ -494,7 +522,7 @@ int main(int argc, char *argv[])
 	if (opts.file_list == opt_yes) {
 		FILE *files_fp = list_file_open(opts.list_dir, "/files.lst");
 
-		print_file_header("Files List", files_fp);
+		print_file_header(files_fp, "Files List");
 
 		empty_list_print(&ht->extras, files_fp, true);
 		result = list_file_print(ht, files_fp);
@@ -508,15 +536,21 @@ int main(int argc, char *argv[])
 	if (1) {
 		struct compare_file_pointers fps;
 		unsigned int empty_count;
+		unsigned int sleep_time;
+		unsigned int f_count;
 
-		fprintf(stderr, "find-dupes: Comparing %lu files...\n",
-			file_count(ht));
+		f_count = file_count(ht);
+
+		sleep_time = get_sleep_time(f_count);
+
+		fprintf(stderr, "find-dupes: Comparing %u files...\n",
+			f_count);
 
 		fps.dupes = list_file_open(opts.list_dir, "/dupes.lst");
-		print_file_header("Dupes List", fps.dupes);
+		print_file_header(fps.dupes, "Dupes List");
 
 		fps.unique = list_file_open(opts.list_dir, "/unique.lst");
-		print_file_header("Unique List", fps.unique);
+		print_file_header(fps.unique, "Unique List");
 
 		compare_files(wq, ht, check_for_signals, &fps);
 
@@ -527,8 +561,9 @@ int main(int argc, char *argv[])
 				debug("compare wait %u (got signal)\n", i);
 				sleep(1);
 			} else {
+				
 				debug("compare wait %u\n", i);
-				sleep(6);
+				sleep(sleep_time);
 			}
 		}
 
