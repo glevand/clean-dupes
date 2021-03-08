@@ -9,12 +9,40 @@
 #include "util.h"
 
 #if defined(DEBUG)
+static unsigned int verbosity = 10;
 static bool debug_on = true;
 #else
+static unsigned int verbosity = 0;
 static bool debug_on = false;
 #endif
 
+void set_verbosity(unsigned int v)
+{
+	verbosity = v;
+}
+
+unsigned int get_verbosity(void)
+{
+	return verbosity;
+}
+
+void set_debug_on(bool b)
+{
+	debug_on = b;
+}
+
+bool get_debug_on(void)
+{
+	return debug_on;
+}
+
 static FILE *log;
+
+void log_flush(void)
+{
+	fflush(stderr);
+	fflush(log);
+}
 
 void set_log_path(const char *log_path)
 {
@@ -41,16 +69,6 @@ void set_log_fp(FILE *new_log)
 		fclose(log);
 	}
 	log = new_log;
-}
-
-void set_debug_on(bool b)
-{
-	debug_on = b;
-}
-
-bool get_debug_on(void)
-{
-	return debug_on;
 }
 
 static void __attribute__ ((unused)) _vlog(const char *func, int line,

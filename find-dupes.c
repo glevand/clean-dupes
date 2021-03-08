@@ -57,6 +57,7 @@ struct opts {
 	unsigned int buckets;
 	enum opt_value help;
 	enum opt_value verbose;
+	enum opt_value debug;
 	enum opt_value version;
 	struct list src_dir_list;
 };
@@ -75,6 +76,7 @@ static void print_usage(const struct opts *opts)
 		"  -b --buckets    - Hash bucket scale factor. Default: '%u'.\n"
 		"  -h --help       - Show this help and exit.\n"
 		"  -v --verbose    - Verbose execution.\n"
+		"  -g --debug      - Extra verbose execution.\n"
 		"  -V --version    - Display the program version number.\n"
 		, opts->list_dir, opts->jobs, opts->buckets);
 
@@ -94,7 +96,7 @@ static void src_dir_add(struct list *src_dir_list, const char *path)
 	sd = mem_alloc_zero(sizeof(*sd) + path_len + 1);
 
 	memcpy(sd->path, path, path_len);
-	debug("'%s'\n", sd->path);
+	//debug("'%s'\n", sd->path);
 
 	list_add_tail(src_dir_list, &sd->list_entry);
 }
@@ -109,6 +111,7 @@ static void opts_init(struct opts *opts, const char *date)
 		.buckets = 1,
 		.help = opt_no,
 		.verbose = opt_no,
+		.debug = opt_no,
 		.version = opt_no,
 	};
 
@@ -133,12 +136,13 @@ static int opts_parse(struct opts *opts, int argc, char *argv[])
 		{"buckets",    required_argument, NULL, 'b'},
 		{"help",       no_argument,       NULL, 'h'},
 		{"verbose",    no_argument,       NULL, 'v'},
+		{"debug",      no_argument,       NULL, 'g'},
 		{"version",    no_argument,       NULL, 'V'},
 		{ NULL,        0,                 NULL, 0},
 	};
-	static const char short_options[] = "l:fj:b:hvV";
+	static const char short_options[] = "l:fj:b:hvgV";
 
-	if (1) {
+	if (0) {
 		int i;
 
 		debug("argc = %d\n", argc);
@@ -194,6 +198,11 @@ static int opts_parse(struct opts *opts, int argc, char *argv[])
 			break;
 		case 'v':
 			opts->verbose = opt_yes;
+			set_verbosity(1);
+			break;
+		case 'g':
+			opts->debug = opt_yes;
+			set_verbosity(10);
 			set_debug_on(true);
 			break;
 		case 'V':
@@ -340,7 +349,7 @@ static void compare_queue_print(struct work_queue *wq, unsigned int total_count,
 	//debug("totals.total: %u\n", totals.total);
 	//debug("total_count   %u\n", total_count);
 
-	fprintf(stderr, "find-dupes: Compared %u files.  Found %u unique files, %u duplicate files, %u empty files.\n",
+	fprintf(stderr, "find-dupes: Compared %u files. Found %u unique files, %u duplicate files, %u empty files.\n",
 		total_count, totals.unique, totals.dupes, empty_count);
 }
 
@@ -587,10 +596,12 @@ int main(int argc, char *argv[])
 	}
 
 exit_clean:
-	debug("exit_clean\n");
+	//debug("exit_clean\n");
 
 	compare_queue_clean(wq);
 	work_queue_delete(wq);
+
+	log_flush();
 
 	timer_stop(&timer);
 

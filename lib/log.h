@@ -4,6 +4,9 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+void set_verbosity(unsigned int v);
+unsigned int get_verbosity(void);
+
 void __attribute__ ((unused, format (printf, 3, 4))) _log(const char *func, int line,
 	const char *fmt, ...);
 void __attribute__ ((unused, format (printf, 1, 2))) log_raw(const char *fmt, ...);
@@ -11,6 +14,7 @@ void __attribute__ ((unused, format (printf, 1, 2))) log_raw(const char *fmt, ..
 
 void set_log_path(const char *log_path);
 void set_log_fp(FILE *new_log);
+void log_flush(void);
 
 void __attribute__ ((unused, format (printf, 3, 4))) _debug(const char *func, int line,
 	const char *fmt, ...);
