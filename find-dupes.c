@@ -9,8 +9,6 @@
 #include "config.h"
 #endif
 
-#include "timer.h"
-
 #include <assert.h>
 #include <errno.h>
 #include <getopt.h>
@@ -23,6 +21,7 @@
 
 #include "mem.h"
 #include "log.h"
+#include "timer.h"
 #include "util.h"
 
 #include "compare.h"
@@ -100,6 +99,31 @@ static void src_dir_add(struct list *src_dir_list, const char *path)
 	list_add_tail(src_dir_list, &sd->list_entry);
 }
 
+static void opts_init(struct opts *opts, const char *date)
+{
+	int result;
+
+	*opts = (struct opts) {
+		.list_dir = NULL,
+		.file_list = opt_no,
+		.buckets = 1,
+		.help = opt_no,
+		.verbose = opt_no,
+		.version = opt_no,
+	};
+
+	opts->list_dir = mem_strdupcat("/tmp/find-dupes-", date);
+
+	result = sysconf(_SC_NPROCESSORS_ONLN);
+
+	if (result < 0) {
+		log("ERROR: NPROCESSORS_ONLN failed: %s\n", strerror(errno));
+		opts->jobs = 1;
+	} else {
+		opts->jobs = result;
+	}	
+}
+
 static int opts_parse(struct opts *opts, int argc, char *argv[])
 {
 	static const struct option long_options[] = {
@@ -113,25 +137,6 @@ static int opts_parse(struct opts *opts, int argc, char *argv[])
 		{ NULL,        0,                 NULL, 0},
 	};
 	static const char short_options[] = "l:fj:b:hvV";
-	int result;
-
-	*opts = (struct opts) {
-		.list_dir = NULL,
-		.file_list = opt_no,
-		.buckets = 1,
-		.help = opt_no,
-		.verbose = opt_no,
-		.version = opt_no,
-	};
-
-	result = sysconf(_SC_NPROCESSORS_ONLN);
-
-	if (result < 0) {
-		log("ERROR: NPROCESSORS_ONLN failed: %s\n", strerror(errno));
-		opts->jobs = 1;
-	} else {
-		opts->jobs = result;
-	}	
 
 	if (1) {
 		int i;
@@ -163,6 +168,7 @@ static int opts_parse(struct opts *opts, int argc, char *argv[])
 				return -1;
 			}
 
+			mem_free(opts->list_dir);
 			opts->list_dir = mem_strdup(optarg);
 			break;
 		}
@@ -390,6 +396,9 @@ int main(int argc, char *argv[])
 	unsigned int i;
 	int result;
 
+	timer_start(&timer);
+	opts_init(&opts, timer_start_str(&timer));
+
 	if (opts_parse(&opts, argc, argv)) {
 		print_usage(&opts);
 		return EXIT_FAILURE;
@@ -405,14 +414,12 @@ int main(int argc, char *argv[])
 		return EXIT_SUCCESS;
 	}
 
-	if (!opts.list_dir) {
+	if (!opts.list_dir || !opts.list_dir[0]) {
 		fprintf(stderr,
 			"find-dupes: ERROR: Missing required flag --list-dir.'\n");
 		print_usage(&opts);
 		return EXIT_FAILURE;
 	}
-
-	timer_start(&timer);
 
 	if (access(opts.list_dir, F_OK)) {
 		result = mkdir(opts.list_dir, S_IRWXU | S_IRWXG | S_IRWXO);

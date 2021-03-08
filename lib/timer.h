@@ -9,14 +9,17 @@
 
 struct timer {
 	time_t start_time;
+	char start_str[128];
 	time_t end_time;
 };
 
 size_t timer_duration_str(const struct timer *timer, char *str, size_t str_len);
 
-static inline void timer_start(struct timer *timer)
+void timer_start(struct timer *timer);
+
+static inline const char *timer_start_str(struct timer *timer)
 {
-	timer->start_time = timer->end_time = time(NULL);
+	return timer->start_str;
 }
 
 static inline unsigned int timer_stop(struct timer *timer)
