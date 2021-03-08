@@ -81,16 +81,19 @@ static int compare_files_cb(struct work_item *wi)
 		goto exit;
 	}
 
-	i = 1;
-	cp_debug("=== wi-%u ===\n", wi->id);
-	list_for_each(cbd->ht_list, hte_1, list_entry) {
-		struct file_data *data = (struct file_data *)hte_1->data;
-		cp_debug("hte-%u = %p: key = %lu, %s\n", i++, hte_1,
-			hte_1->key, data->name);
+	if (0) {
+		i = 1;
+		cp_debug("=== wi-%u ===\n", wi->id);
+		list_for_each(cbd->ht_list, hte_1, list_entry) {
+			struct file_data *data = (struct file_data *)hte_1->data;
+			cp_debug("wi-%u: hte-%u.%u = %p: key = %lu, %s\n",
+				wi->id, wi->id, i++, hte_1,
+				hte_1->key, data->name);
+		}
+		cp_debug("============\n");
 	}
-	cp_debug("============\n");
 
-	list_for_each_safe(cbd->ht_list, hte_1, hte_safe, list_entry) {
+	list_for_each(cbd->ht_list, hte_1, list_entry) {
 		struct hash_table_entry *hte_2;
 		unsigned int match_counter = 0;
 		struct dupe_buffer d_buf = {
@@ -103,9 +106,14 @@ static int compare_files_cb(struct work_item *wi)
 
 		data_1 = (struct file_data *)hte_1->data;
 
-		cp_debug("--------\n");
-		cp_debug("       hte_1 = %p: key = %lu, %s\n", hte_1,
-			hte_1->key, data_1->name);
+		if (data_1->matched) {
+			cp_debug("wi-%u: skipping:    hte-%u.1,   key = %lu, %s\n",
+				wi->id, wi->id, hte_1->key, data_1->name);
+			continue;
+		}
+
+		cp_debug("wi-%u: checking:    hte-%u.1,   key = %lu, %s\n",
+			wi->id, wi->id, hte_1->key, data_1->name);
 
 		i = 0;
 		hte_2 = hte_1;
@@ -115,59 +123,70 @@ static int compare_files_cb(struct work_item *wi)
 			i++;
 			data_2 = (struct file_data *)hte_2->data;
 
+// 			cp_debug("wi-%u: test:        hte-%u.2.%u, key = %lu, %s\n",
+// 				wi->id, wi->id, i, hte_2->key, data_2->name);
+
 			if (data_2->matched) {
-				cp_debug("skip: hte_2.%u = %p: key = %lu, %s\n",
-					i, hte_2, hte_2->key, data_2->name);
+				cp_debug("wi-%u: skipping:    hte-%u.2.%u, key = %lu, %s\n",
+					wi->id, wi->id, i, hte_2->key, data_2->name);
 				continue;
 			}
 
 			if (hte_1->key != hte_2->key) {
-				cp_debug("      hte_2.%u = %p: key = %lu, %s\n",
-					i, hte_2, hte_2->key, data_2->name);
+				cp_debug("wi-%u: keys differ: hte-%u.2.%u, key = %lu, %s\n",
+					wi->id, wi->id, i, hte_2->key, data_2->name);
+				continue;
+			}
+
+			cp_debug("wi-%u: keys match:  hte-%u.2.%u, key = %lu, %s\n",
+				wi->id, wi->id, i, hte_2->key, data_2->name);
+
+			if (md5sum_empty(&data_1->md5sum)) {
+				cp_debug("wi-%u: no sum:      hte-%u.1,  key = %lu, %s\n",
+					wi->id, wi->id, hte_1->key, data_1->name);
+				md5sum_file(&data_1->md5sum, data_1->name);
 			} else {
-				if (md5sum_empty(&data_1->md5sum)) {
-					md5sum_file(&data_1->md5sum,
-						data_1->name);
+				cp_debug("wi-%u: have sum:      hte-%u.1, key = %lu, %s\n",
+					wi->id, wi->id, hte_1->key, data_1->name);
+			}
+
+			if (md5sum_empty(&data_2->md5sum)) {
+				cp_debug("wi-%u: no sum:      hte-%u.2.%u, key = %lu, %s\n",
+					wi->id, wi->id, i, hte_2->key, data_2->name);
+				md5sum_file(&data_2->md5sum, data_2->name);
+			} else {
+				cp_debug("wi-%u: have sum:   hte-%u.2.%u, key = %lu, %s\n",
+					wi->id, wi->id, i, hte_2->key, data_2->name);
+			}
+
+			if (md5sum_compare(&data_1->md5sum, &data_2->md5sum)) {
+				cp_debug("wi-%u: sums match:  hte-%u.2.%u, key = %lu, %s => %s\n",
+					wi->id, wi->id, i, hte_2->key, data_2->name, data_1->name);
+
+				data_2->matched = true;
+				match_counter++;
+
+				if (match_counter == 1) {
+					dupe_buffer_write_first(&d_buf, data_1);
 				}
-				if (md5sum_empty(&data_2->md5sum)) {
-					md5sum_file(&data_2->md5sum,
-						data_2->name);
-				}
-				if (! md5sum_compare(&data_1->md5sum,
-					&data_2->md5sum)) {
-					cp_debug("key:  hte_2.%u = %p: key = %lu, %s\n",
-						i, hte_2, hte_2->key,
-						data_2->name);
-				} else {
-					cp_debug("sum:  hte_2.%u = %p: key = %lu, %s\n",
-						i, hte_2, hte_2->key,
-						data_2->name);
-					if (!match_counter) {
-						dupe_buffer_write_first(&d_buf,
-							data_1);
-					}
-					data_2->matched = true;
-					match_counter++;
-					dupe_buffer_write_match(&d_buf, data_2,
-						match_counter);
-				}
+				dupe_buffer_write_match(&d_buf, data_2,
+					match_counter);
+			} else {
+				cp_debug("wi-%u: sums differ: %s = %s\n",
+					wi->id, data_1->name ,data_2->name);
 			}
 		}
 
 		if (cbd->check_for_signals()) {
-			//debug("exit on signal\n");
+			//cp_debug("exit on signal\n");
 			result = -1;
 			goto exit;
 		}
 
-		if (!match_counter) {
-			assert(!d_buf.buf);
-			compare_result->unique++;
-			fprintf(cbd->fps->unique, "%s\n", data_1->name);
-		} else {
+		if (match_counter) {
 			size_t result;
 
-			cp_debug("found %u dupes\n", match_counter);
+			cp_debug("wi-%u: found %u dupes\n", wi->id, match_counter);
 
 			compare_result->dupes += match_counter;
 
@@ -186,18 +205,21 @@ static int compare_files_cb(struct work_item *wi)
 			}
 
 			free(d_buf.buf);
-		}
+		} else {
+			cp_debug("wi-%u: found unique %s\n", wi->id, data_1->name);
 
-		file_table_entry_clean(hte_1);
+			assert(!d_buf.buf);
+			compare_result->unique++;
+			fprintf(cbd->fps->unique, "%s\n", data_1->name);
+		}
 	}
 
 exit:
-	list_for_each(cbd->ht_list, hte_1, list_entry) {
-		struct file_data *data = (struct file_data *)hte_1->data;
-		cp_debug("hte-%u = %p: key = %lu, %s\n", i++, hte_1,
-			hte_1->key, data->name);
+	list_for_each_safe(cbd->ht_list, hte_1, hte_safe, list_entry) {
+		file_table_entry_clean(hte_1);
 	}
 	work_queue_finish_item(wi);
+	cp_debug("wi-%u: done.\n", wi->id);
 	return result;
 }
 
@@ -221,7 +243,7 @@ static void compare_files_queue_work(unsigned int id, struct work_queue *wq,
 	wi->cb = compare_files_cb;
 	wi->result = (void*)(cbd + 1);
 
-	//debug("> id = %u, list = %p, %p\n", wi->id, cbd->ht_list, &wq->ready_list);
+	//cp_debug("> id = %u, list = %p, %p\n", wi->id, cbd->ht_list, &wq->ready_list);
 	work_queue_add_item(wq, wi);
 }
 
@@ -230,8 +252,10 @@ void compare_files(struct work_queue *wq, struct hash_table *ht,
 {
 	unsigned int i;
 
+	cp_debug("ht count = %u\n", ht->count);
+
 	for (i = 0; i < ht->count; i++) {
-		//debug("queue list[%u]\n", i);
+		//cp_debug("queue list[%u]\n", i);
 		compare_files_queue_work(i, wq, check_for_signals, fps,
 			&(ht->array[i]));
 	}

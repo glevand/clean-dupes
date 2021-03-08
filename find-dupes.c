@@ -313,7 +313,8 @@ static void empty_list_clean(struct list *empty_list)
 	}
 }
 
-static void compare_queue_print(struct work_queue *wq, unsigned int empty_count)
+static void compare_queue_print(struct work_queue *wq, unsigned int total_count,
+	unsigned int empty_count)
 {
 	struct compare_counts totals = {0};
 	struct work_item *wi;
@@ -331,21 +332,16 @@ static void compare_queue_print(struct work_queue *wq, unsigned int empty_count)
 		assert(wi->result);
 		result = wi->result;
 
-		if (0) {
-			debug("wi-%u result: total = %u, dupe = %u, unique = %u\n",
-				wi->id, result->total, result->dupes,
-				result->unique);
-		}
-
 		totals.total += result->total;
 		totals.dupes += result->dupes;
 		totals.unique += result->unique;
 	}
 
-	//debug("Processed %u files.\n", totals.total);
+	//debug("totals.total: %u\n", totals.total);
+	//debug("total_count   %u\n", total_count);
 
-	fprintf(stderr, "find-dupes: Found %u unique files, %u duplicate files, %u empty files.\n",
-		totals.unique, totals.dupes, empty_count);
+	fprintf(stderr, "find-dupes: Compared %u files.  Found %u unique files, %u duplicate files, %u empty files.\n",
+		total_count, totals.unique, totals.dupes, empty_count);
 }
 
 static void compare_queue_clean(struct work_queue *wq)
@@ -542,16 +538,16 @@ int main(int argc, char *argv[])
 
 	if (1) {
 		struct compare_file_pointers fps;
+		unsigned int total_count;
 		unsigned int empty_count;
 		unsigned int sleep_time;
-		unsigned int f_count;
 
-		f_count = file_count(ht);
+		total_count = file_count(ht);
 
-		sleep_time = get_sleep_time(f_count);
+		sleep_time = get_sleep_time(total_count);
 
 		fprintf(stderr, "find-dupes: Comparing %u files...\n",
-			f_count);
+			total_count);
 
 		fps.dupes = list_file_open(opts.list_dir, "/dupes.lst");
 		print_file_header(fps.dupes, "Dupes List");
@@ -587,7 +583,7 @@ int main(int argc, char *argv[])
 		empty_count = list_item_count(&ht->extras);
 		empty_list_clean(&ht->extras);
 
-		compare_queue_print(wq, empty_count);
+		compare_queue_print(wq, total_count, empty_count);
 	}
 
 exit_clean:
