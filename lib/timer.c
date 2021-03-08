@@ -2,9 +2,32 @@
  *  Seconds timer.
  */
 
+#include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "timer.h"
+#include "log.h"
+
+void timer_start(struct timer *timer)
+{
+	struct tm* tm_info;
+	size_t result;
+
+	timer->start_time = timer->end_time = time(NULL);
+
+	tm_info = localtime(&timer->start_time);
+	result = strftime(timer->start_str, sizeof(timer->start_str),
+		"%Y.%m.%d.%H.%M.%S", tm_info);
+
+	if (!result) {
+		log("ERROR: strftime failed: '%s'\n", timer->start_str);
+		assert(0);
+		exit(EXIT_FAILURE);
+	}
+
+	//debug("strftime: '%s'\n", timer->start_str);
+}
 
 size_t timer_duration_str(const struct timer *timer, char *str, size_t str_len)
 {
