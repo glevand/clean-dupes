@@ -138,8 +138,10 @@ static int compare_files_cb(struct work_item *wi)
 				continue;
 			}
 
-			cp_debug("wi-%u: keys match:  hte-%u.2.%u, key = %lu, %s\n",
+			if (get_verbosity() > 2) {
+				log("wi-%u: keys match:  hte-%u.2.%u, key = %lu, %s\n",
 				wi->id, wi->id, i, hte_2->key, data_2->name);
+			}
 
 			if (md5sum_empty(&data_1->md5sum)) {
 				cp_debug("wi-%u: no sum:      hte-%u.1,  key = %lu, %s\n",
@@ -160,8 +162,11 @@ static int compare_files_cb(struct work_item *wi)
 			}
 
 			if (md5sum_compare(&data_1->md5sum, &data_2->md5sum)) {
-				cp_debug("wi-%u: sums match:  hte-%u.2.%u, key = %lu, %s => %s\n",
-					wi->id, wi->id, i, hte_2->key, data_2->name, data_1->name);
+				if (get_verbosity() > 2) {
+					log("wi-%u: sums match:  hte-%u.2.%u, key = %lu, %s => %s\n",
+						wi->id, wi->id, i, hte_2->key,
+						data_2->name, data_1->name);
+				}
 
 				data_2->matched = true;
 				match_counter++;
@@ -186,7 +191,10 @@ static int compare_files_cb(struct work_item *wi)
 		if (match_counter) {
 			size_t result;
 
-			cp_debug("wi-%u: found %u dupes\n", wi->id, match_counter);
+			if (get_verbosity()) {
+				log("wi-%u: found %u dupes: %s\n", wi->id,
+					match_counter, data_1->name);
+			}
 
 			compare_result->dupes += match_counter;
 
@@ -206,7 +214,10 @@ static int compare_files_cb(struct work_item *wi)
 
 			free(d_buf.buf);
 		} else {
-			cp_debug("wi-%u: found unique %s\n", wi->id, data_1->name);
+			if (get_verbosity() > 1) {
+				log("wi-%u: found unique %s\n", wi->id,
+					data_1->name);
+			}
 
 			assert(!d_buf.buf);
 			compare_result->unique++;
