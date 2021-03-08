@@ -6,6 +6,8 @@
 #include "config.h"
 #endif
 
+//#define DEBUG 1
+
 #include <assert.h>
 #include <errno.h>
 #include <stdio.h>
@@ -22,7 +24,7 @@ int md5sum_file(struct md5sum *md5sum, const char *file)
 	EVP_MD_CTX *ctx;
 	FILE *fp;
 
-	//debug("'%s'\n", file);
+	//debug("'%s' start\n", file);
 
 	ctx = EVP_MD_CTX_create();
 	EVP_DigestInit(ctx, EVP_md5());
@@ -32,7 +34,7 @@ int md5sum_file(struct md5sum *md5sum, const char *file)
 	if (!fp) {
 		log("ERROR: fopen failed: %s\n", strerror(errno));
 		assert(0);
-		return -1;
+		exit(EXIT_FAILURE);
 	}
 
 	while (1) {
@@ -45,10 +47,10 @@ int md5sum_file(struct md5sum *md5sum, const char *file)
 			log("ERROR: fread failed: %s\n", strerror(errno));
 			fclose(fp);
 			assert(0);
-			return -1;
+			exit(EXIT_FAILURE);
 		}
 
-		//debug("update: %u\n", (unsigned)bytes);
+		//debug("'%s' update: %u\n", file, (unsigned)bytes);
 		EVP_DigestUpdate(ctx, buf, bytes);
 
 		if (feof(fp)) {
@@ -57,22 +59,23 @@ int md5sum_file(struct md5sum *md5sum, const char *file)
 		}
 
 	}
+	//debug("'%s' finish\n", file);
 
 	fclose(fp);
 
 	EVP_DigestFinal(ctx, md5sum->digest, &digest_len);
 	EVP_MD_CTX_destroy(ctx);
 
-	if (0) {
-		struct md5sum_str s;
-		md5sum_sprint(md5sum, &s);
-		debug("%s => %s\n", file, s.str);
-	}
-
 	if (digest_len != md5sum_digest_len) {
 		log("ERROR: Bad digest length: %u != %u\n", digest_len, md5sum_digest_len);
 		assert(0);
 		exit(EXIT_FAILURE);
+	}
+
+	if (0) {
+		struct md5sum_str s;
+		md5sum_sprint(md5sum, &s);
+		debug("done: %s => %s\n", file, s.str);
 	}
 	return 0;
 }

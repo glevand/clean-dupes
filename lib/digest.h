@@ -36,4 +36,9 @@ static inline bool md5sum_empty(const struct md5sum *md5sum)
 	return !md5sum->digest[0];
 }
 
+static inline void md5sum_print(const struct md5sum *md5sum)
+{
+	md5sum_fprint(md5sum, stdout);
+}
+
 #endif /* _LIB_DIGEST_H */
