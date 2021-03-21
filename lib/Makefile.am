@@ -24,6 +24,7 @@ include_HEADERS = digest.h \
  hash-table.h \
  list.h \
  log.h \
+ mmap.h \
  mem.h \
  thread-pool.h \
  timer.h \
@@ -47,6 +48,7 @@ libclean_la_SOURCES = \
  list.c list.h \
  log.c log.h \
  mem.c mem.h \
+ mmap.c mmap.h \
  thread-pool.c thread-pool.h \
  timer.c timer.h \
  util.c util.h \
