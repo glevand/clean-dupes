@@ -52,6 +52,8 @@ static struct hash_table_entry *ht_entry_init(const char *file_name,
 	fte->file_data.name_len = len;
 	memcpy(fte->file_data.name, file_name, len);
 
+	digest_init(&fte->file_data.digest);
+
 	//debug("%p: '%s'\n", list, file_name);
 	hash_table_entry_init(&fte->hte, list, file_size, &fte->file_data);
 

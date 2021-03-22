@@ -31,7 +31,7 @@ find_dupes_SOURCES = \
 	find.c find.h \
 	list-file.c list-file.h \
 	find-dupes.c
-find_dupes_LDADD = lib/libclean.la -lssl -lcrypto -lpthread 
+find_dupes_LDADD = lib/libclean.la -lssl -lcrypto -lpthread $(MMHASH_LIBS)
 
 .PHONY: help
 

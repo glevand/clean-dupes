@@ -143,25 +143,25 @@ static int compare_files_cb(struct work_item *wi)
 				wi->id, wi->id, i, hte_2->key, data_2->name);
 			}
 
-			if (md5sum_empty(&data_1->md5sum)) {
+			if (digest_is_empty(&data_1->digest)) {
 				cp_debug("wi-%u: no sum:      hte-%u.1,  key = %lu, %s\n",
 					wi->id, wi->id, hte_1->key, data_1->name);
-				md5sum_file(&data_1->md5sum, data_1->name);
+				digest_hash_file(&data_1->digest, data_1->name);
 			} else {
 				cp_debug("wi-%u: have sum:      hte-%u.1, key = %lu, %s\n",
 					wi->id, wi->id, hte_1->key, data_1->name);
 			}
 
-			if (md5sum_empty(&data_2->md5sum)) {
+			if (digest_is_empty(&data_2->digest)) {
 				cp_debug("wi-%u: no sum:      hte-%u.2.%u, key = %lu, %s\n",
 					wi->id, wi->id, i, hte_2->key, data_2->name);
-				md5sum_file(&data_2->md5sum, data_2->name);
+				digest_hash_file(&data_2->digest, data_2->name);
 			} else {
 				cp_debug("wi-%u: have sum:   hte-%u.2.%u, key = %lu, %s\n",
 					wi->id, wi->id, i, hte_2->key, data_2->name);
 			}
 
-			if (md5sum_compare(&data_1->md5sum, &data_2->md5sum)) {
+			if (digest_compare(&data_1->digest, &data_2->digest)) {
 				if (get_verbosity() > 2) {
 					log("wi-%u: sums match:  hte-%u.2.%u, key = %lu, %s => %s\n",
 						wi->id, wi->id, i, hte_2->key,
