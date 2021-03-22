@@ -10,7 +10,7 @@
 #include "work-queue.h"
 
 struct file_data {
-	struct md5sum md5sum;
+	struct digest digest;
 	bool matched;
 	size_t name_len;
 	char name[];

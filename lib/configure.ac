@@ -20,6 +20,16 @@ AM_INIT_AUTOMAKE
 AC_GNU_SOURCE
 LT_INIT
 
+AC_CHECK_LIB(
+	[murmurhash],
+	[lmmh_x64_128],
+	[MMHASH_LIBS=-lmurmurhash],
+	[AC_MSG_NOTICE([MurmurHash library not found.  Using md5sum.])]
+)
+AC_SUBST([MMHASH_LIBS])
+
+AC_CHECK_HEADERS_ONCE([murmurhash.h])
+
 AM_SILENT_RULES([yes])
 
 default_cflags="--std=gnu99 -g \
