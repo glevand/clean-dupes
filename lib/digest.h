@@ -40,14 +40,14 @@ static inline void digest_init(struct digest *digest)
 
 static inline bool digest_is_empty(const struct digest *digest)
 {
-	return !digest->data[0];
+	return !digest->data[0] && !digest->data[1];
 }
 
 static inline bool digest_compare(const struct digest *digest1,
 	const struct digest *digest2)
 {
 	return (digest1->data[0] == digest2->data[0]
-		&& digest1->data[1] == digest2->data[2]);
+		&& digest1->data[1] == digest2->data[1]);
 }
 
 static inline void digest_print(const struct digest *digest)
