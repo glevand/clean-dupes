@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+#
+# (@PACKAGE_NAME@) version @PACKAGE_VERSION@
+# @PACKAGE_URL@
+# Send bug reports to: Geoff Levand <geoff@infradead.org>
+#
 
 sec_to_min() {
 	local sec=${1}
