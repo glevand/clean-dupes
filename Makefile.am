@@ -4,24 +4,39 @@ SUBDIRS = lib
 
 ACLOCAL_AMFLAGS = -I m4
 
-AM_CPPFLAGS = -I$(srcdir)/lib $(DEFAULT_CPPFLAGS)
-AM_CFLAGS = $(DEFAULT_CFLAGS)
-AM_LDFLAGS = -Llib
+composed_bin_scripts = clean-dupes.sh
+composed_lib_scripts = 
 
-EXTRA_DIST = bootstrap version.sh configure.ac $(srcdir)/m4
+bin_SCRIPTS = $(composed_bin_scripts) $(composed_lib_scripts)
 
-MAINTAINERCLEANFILES = autom4te.cache aclocal.m4 compile config.* configure \
- depcomp install-sh ltmain.sh m4/*.m4 Makefile.in missing $(PACKAGE)-*.gz
+edit = sed \
+	-e 's|@PACKAGE\@|$(PACKAGE)|g' \
+	-e 's|@PACKAGE_BUGREPORT\@|$(PACKAGE_BUGREPORT)|g' \
+	-e 's|@PACKAGE_NAME\@|$(PACKAGE_NAME)|g' \
+	-e 's|@PACKAGE_URL\@|$(PACKAGE_URL)|g' \
+	-e 's|@PACKAGE_VERSION\@|$(PACKAGE_VERSION)|g' \
+	-e 's|@datadir\@|$(pkgdatadir)|g' \
+	-e 's|@libexecdir\@|$(libexecdir)|g' \
+	-e 's|@prefix\@|$(prefix)|g'
 
-maintainer-clean-local:
-	rm -rf m4
+$(composed_bin_scripts): % : Makefile $(srcdir)/%.in
+	rm -f $@ $@.tmp
+	mkdir -p $$(dirname $@)
+	$(edit) $(srcdir)/$@.in > $@.tmp
+	chmod +x $@.tmp
+	mv $@.tmp $@
+
+$(composed_lib_scripts): % : Makefile $(srcdir)/%.in
+	rm -f $@ $@.tmp
+	mkdir -p $$(dirname $@)
+	$(edit) $(srcdir)/$@.in > $@.tmp
+	chmod -x $@.tmp
+	mv $@.tmp $@
 
 LIBTOOL_DEPS = @LIBTOOL_DEPS@
 
 libtool: $(LIBTOOL_DEPS)
 	$(SHELL) ./config.status libtool
-
-dist_bin_SCRIPTS = clean-dupes.sh
 
 bin_PROGRAMS = find-dupes
 
@@ -32,6 +47,22 @@ find_dupes_SOURCES = \
 	list-file.c list-file.h \
 	find-dupes.c
 find_dupes_LDADD = lib/libclean.la -lssl -lcrypto -lpthread $(MMHASH_LIBS)
+
+AM_CPPFLAGS = -I$(srcdir)/lib $(DEFAULT_CPPFLAGS)
+AM_CFLAGS = $(DEFAULT_CFLAGS)
+AM_LDFLAGS = -Llib
+
+EXTRA_DIST = bootstrap configure.ac COPYING m4 mit-plus-license.txt README.md \
+	version.sh $(addsuffix .in, $(composed_bin_scripts)) \
+	$(nobase_bin_SCRIPTS)
+
+CLEANFILES = $(bin_SCRIPTS)
+
+MAINTAINERCLEANFILES = autom4te.cache aclocal.m4 compile config.* configure \
+ depcomp install-sh ltmain.sh m4/*.m4 Makefile.in missing $(PACKAGE)-*.gz
+
+maintainer-clean-local:
+	rm -rf m4
 
 .PHONY: help
 

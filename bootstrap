@@ -4,7 +4,7 @@ script_name="${0##*/}"
 
 echo "${script_name}: '$(pwd)'"
 
-progs="autoconf automake autopoint gettext libtoolize make pkg-config"
+progs="autoconf automake bash gettext libtoolize make pkg-config"
 for p in ${progs}; do
 	if ! test -x "$(command -v ${p})"; then
 		echo "${script_name}: ERROR: Please install '${p}'." >&2
