@@ -2,17 +2,6 @@ AUTOMAKE_OPTIONS = foreign
 
 ACLOCAL_AMFLAGS = -I m4
 
-AM_CPPFLAGS = $(DEFAULT_CPPFLAGS)
-AM_CFLAGS = $(DEFAULT_CFLAGS)
-
-EXTRA_DIST = bootstrap version.sh configure.ac $(srcdir)/m4
-
-MAINTAINERCLEANFILES = autom4te.cache aclocal.m4 compile config.* configure \
- depcomp install-sh ltmain.sh m4/*.m4 Makefile.in missing $(PACKAGE)-*.gz
-
-maintainer-clean-local:
-	rm -rf m4
-
 LIBTOOL_DEPS = @LIBTOOL_DEPS@
 
 libtool: $(LIBTOOL_DEPS)
@@ -20,7 +9,7 @@ libtool: $(LIBTOOL_DEPS)
 
 noinst_LTLIBRARIES = libclean.la
 
-include_HEADERS = digest.h \
+noinst_HEADERS = digest.h \
  hash-table.h \
  list.h \
  log.h \
@@ -54,6 +43,18 @@ libclean_la_SOURCES = \
  util.c util.h \
  work-queue.c work-queue.h
 libclean_la_LDFLAGS = -version-info 1:0:0 ${EXTRA_LDFLAGS}
+
+AM_CPPFLAGS = $(DEFAULT_CPPFLAGS)
+AM_CFLAGS = $(DEFAULT_CFLAGS)
+
+EXTRA_DIST = bootstrap configure.ac COPYING m4 mit-plus-license.txt README.md \
+	version.sh
+
+MAINTAINERCLEANFILES = autom4te.cache aclocal.m4 compile config.* configure \
+ depcomp install-sh ltmain.sh m4/*.m4 Makefile.in missing $(PACKAGE)-*.gz
+
+maintainer-clean-local:
+	rm -rf m4
 
 .PHONY: help
 

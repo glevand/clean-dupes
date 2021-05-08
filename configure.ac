@@ -2,7 +2,9 @@
 
 AC_INIT([clean-dupes],
     [m4_esyscmd_s([./version.sh])],
-    [Geoff Levand <geoff@infradead.org>])
+    [Geoff Levand <geoff@infradead.org>],
+    [clean-dupes],
+    [https://github.com/glevand/clean-dupes])
 
 AC_USE_SYSTEM_EXTENSIONS
 

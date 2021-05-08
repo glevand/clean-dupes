@@ -36,11 +36,16 @@
 # error PACKAGE_BUGREPORT not defined.
 #endif
 
-const char *version_string = "find-dupes (" PACKAGE_NAME ") " PACKAGE_VERSION;
+const char *version_string = "find-dupes (" PACKAGE_NAME ") version " PACKAGE_VERSION;
 
 static void print_version(void)
 {
-	printf("%s\n", version_string);
+	fprintf(stderr, "%s\n", version_string);
+}
+
+static void print_project_url(void)
+{
+	fprintf(stderr, PACKAGE_URL "\n");
 }
 
 static void print_bugreport(void)
@@ -64,8 +69,6 @@ struct opts {
 
 static void print_usage(const struct opts *opts)
 {
-	print_version();
-
 	fprintf(stderr,
 		"find-dupes - Search directories and generate lists of unique and duplicate files found.\n"
 		"Usage: find-dupes [flags] src-directory [src-directory]...\n"
@@ -80,6 +83,8 @@ static void print_usage(const struct opts *opts)
 		"  -V --version    - Display the program version number.\n"
 		, opts->list_dir, opts->jobs, opts->buckets);
 
+	print_version();
+	print_project_url();
 	print_bugreport();
 }
 

@@ -18,15 +18,26 @@ usage() {
 	echo "  -1 --gen-dupes  - Find duplicate files and generate a dupes list.  Does not move files.  Default: '${gen_dupes}'." >&2
 	echo "  -2 --gen-moves  - Generate a moves list from a dupes list.  Does not move files.  Default: '${gen_moves}'." >&2
 	echo "  -3 --move-files - Move files in moves list to the backup directory.  Default: '${move_files}'." >&2
+	echo "${script_name} (@PACKAGE_NAME@) version @PACKAGE_VERSION@" >&2
+	echo "@PACKAGE_URL@" >&2
 	echo "Send bug reports to: Geoff Levand <geoff@infradead.org>." >&2
 	eval "${old_xtrace}"
 }
 
 process_opts() {
 	local short_opts="b:d:m:k:hvg123"
-	local long_opts="backup-dir:,dupes-list:,moves-list:,keep-pos:,\
-help,verbose,debug,\
-gen-dupes,gen-moves,move-files"
+	local long_opts="backup-dir:,dupes-list:,moves-list:,keep-pos:,help,\
+verbose,debug,gen-dupes,gen-moves,move-files"
+
+	backup_dir=''
+	dupes_list=''
+	moves_list=''
+	keep_pos=''
+	usage=''
+	verbose=''
+	gen_dupes=''
+	gen_moves=''
+	move_files=''
 
 	local opts
 	opts=$(getopt --options ${short_opts} --long ${long_opts} -n "${script_name}" -- "$@")
@@ -80,11 +91,7 @@ gen-dupes,gen-moves,move-files"
 			;;
 		--)
 			shift
-			while [[ ${1} ]] ; do
-				#echo "fill src_dirs: @${1}@"
-				src_dirs+=("${1}")
-				shift
-			done
+			src_dirs=("$@")
 			break
 			;;
 		*)
@@ -101,6 +108,48 @@ on_exit() {
 
 	set +x
 	echo "${script_name}: Done: ${result}, ${sec} sec ($(sec_to_min "${sec}") min)." >&2
+}
+
+on_err() {
+	local f_name=${1}
+	local line_no=${2}
+	local err_no=${3}
+
+	echo "${script_name}: ERROR: function=${f_name}, line=${line_no}, result=${err_no}" >&2
+	exit "${err_no}"
+}
+
+sec_to_min() {
+	local sec=${1}
+	local min=$(( sec / 60 ))
+	local frac_10=$(( (sec - min * 60) * 10 / 60 ))
+	local frac_100=$(( (sec - min * 60) * 100 / 60 ))
+
+	if (( frac_10 != 0 )); then
+		unset frac_10
+	fi
+
+	echo "${min}.${frac_10}${frac_100}"
+}
+
+check_file() {
+	local msg="${1}"
+	local file="${2}"
+
+	if [[ ! -f "${file}" ]]; then
+		echo "${script_name}: ERROR: ${msg} not found: '${file}'" >&2
+		exit 1
+	fi
+}
+
+check_program() {
+	local prog="${1}"
+	local path="${2}"
+
+	if ! test -x "$(command -v "${path}")"; then
+		echo "${script_name}: ERROR: Please install '${prog}'." >&2
+		exit 1
+	fi
 }
 
 check_find_dupes() {
@@ -288,19 +337,20 @@ move_files() {
 }
 
 #===============================================================================
-export PS4='\[\e[0;33m\]+ ${BASH_SOURCE##*/}:${LINENO}:(${FUNCNAME[0]:-"?"}):\[\e[0m\] '
+export PS4='\[\e[0;33m\]+ ${BASH_SOURCE##*/}:${LINENO}:(${FUNCNAME[0]:-main}):\[\e[0m\] '
 script_name="${0##*/}"
 
-SCRIPTS_TOP=${SCRIPTS_TOP:-"$(cd "${BASH_SOURCE%/*}" && pwd)"}
+# SCRIPTS_TOP=${SCRIPTS_TOP:-"$(cd "${BASH_SOURCE%/*}" && pwd)"}
 SECONDS=0
-
-source "${SCRIPTS_TOP}/lib/lib.sh"
-
-trap "on_exit 'Failed.'" EXIT
-set -e
-set -o pipefail
-
 start_time="$(date +%Y.%m.%d-%H.%M.%S)"
+
+trap "on_exit 'Failed'" EXIT
+trap 'on_err ${FUNCNAME[0]:-main} ${LINENO} ${?}' ERR
+trap 'on_err SIGUSR1 ? 3' SIGUSR1
+
+set -eE
+set -o pipefail
+set -o nounset
 
 find_dupes="${find_dupes:-find-dupes}"
 
