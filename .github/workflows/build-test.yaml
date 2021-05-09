@@ -1,0 +1,21 @@
+name: clean-dupes build test
+
+on: workflow_dispatch
+
+jobs:
+
+  build:
+    name: clean-dupes build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+        with:
+            submodules: recursive
+
+      - name: run build test
+        run: ./tests/build-test.sh .
+
+      - name: run find test
+        run: ./tests/find-test.sh .
