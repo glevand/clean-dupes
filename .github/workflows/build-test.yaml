@@ -1,0 +1,39 @@
+name: clean-dupes build test
+
+on:
+  push:
+    branches: [master, dev]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+
+      - name: bootstrap
+        run: ./bootstrap
+
+      - name: configure
+        run: ./configure --prefix="$(pwd)/install"
+
+      - name: make
+        run: make
+
+      - name: make install
+        run: make install
+
+      - name: show help
+        run: |
+            ./install/bin/find-dupes -h
+            echo ''
+            ./install/bin/clean-dupes.sh -h
+
+      - name: find-dupes /usr/bin
+        run: ./install/bin/find-dupes --list-dir=/tmp/find-dupes /usr/bin
+
+      - name: ls lists
+        run: ls /tmp/find-dupes
+
+      - name: cat dupes.lst
+        run: cat /tmp/find-dupes/dupes.lst
