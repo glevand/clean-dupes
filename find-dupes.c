@@ -45,18 +45,21 @@ static void print_version(void)
 
 static void print_project_url(void)
 {
-	fprintf(stderr, PACKAGE_URL "\n");
+	fprintf(stderr, "Project Home: " PACKAGE_URL "\n");
 }
 
-static void print_bugreport(void)
+static void print_project_info(void)
 {
-	fprintf(stderr, "Send bug reports to: " PACKAGE_BUGREPORT ".\n");
+	fprintf(stderr, "  ");
+	print_version();
+	fprintf(stderr, "  ");
+	print_project_url();
 }
 
 enum opt_value {opt_undef = 0, opt_yes, opt_no};
 
 struct opts {
-	char *list_dir;
+	char *output_dir;
 	enum opt_value file_list;
 	unsigned int jobs;
 	unsigned int buckets;
@@ -73,7 +76,7 @@ static void print_usage(const struct opts *opts)
 		"find-dupes - Search directories and generate lists of unique and duplicate files found.\n"
 		"Usage: find-dupes [flags] src-directory [src-directory]...\n"
 		"Option flags:\n"
-		"  -l --list-dir   - Output lists to this directory. Default: '%s'.\n"
+		"  -o --output-dir - Output lists to this directory. Default: '%s'.\n"
 		"  -f --file-list  - Generate a list of all files found.\n"
 		"  -j --jobs       - Number of jobs to run in parallel. Default: '%u'.\n"
 		"  -b --buckets    - Hash bucket scale factor. Default: '%u'.\n"
@@ -81,11 +84,10 @@ static void print_usage(const struct opts *opts)
 		"  -v --verbose    - Verbose execution.\n"
 		"  -g --debug      - Extra verbose execution.\n"
 		"  -V --version    - Display the program version number.\n"
-		, opts->list_dir, opts->jobs, opts->buckets);
+		"Info:\n"
+		, opts->output_dir, opts->jobs, opts->buckets);
 
-	print_version();
-	print_project_url();
-	print_bugreport();
+	print_project_info();
 }
 
 struct src_dir {
@@ -111,7 +113,7 @@ static void opts_init(struct opts *opts, const char *date)
 	int result;
 
 	*opts = (struct opts) {
-		.list_dir = NULL,
+		.output_dir = NULL,
 		.file_list = opt_no,
 		.buckets = 1,
 		.help = opt_no,
@@ -120,7 +122,7 @@ static void opts_init(struct opts *opts, const char *date)
 		.version = opt_no,
 	};
 
-	opts->list_dir = mem_strdupcat("/tmp/find-dupes-", date);
+	opts->output_dir = mem_strdupcat("/tmp/find-dupes-", date);
 
 	result = sysconf(_SC_NPROCESSORS_ONLN);
 
@@ -135,7 +137,7 @@ static void opts_init(struct opts *opts, const char *date)
 static int opts_parse(struct opts *opts, int argc, char *argv[])
 {
 	static const struct option long_options[] = {
-		{"list-dir",   required_argument, NULL, 'l'},
+		{"output-dir", required_argument, NULL, 'o'},
 		{"file-list",  no_argument,       NULL, 'f'},
 		{"jobs",       required_argument, NULL, 'j'},
 		{"buckets",    required_argument, NULL, 'b'},
@@ -145,9 +147,9 @@ static int opts_parse(struct opts *opts, int argc, char *argv[])
 		{"version",    no_argument,       NULL, 'V'},
 		{ NULL,        0,                 NULL, 0},
 	};
-	static const char short_options[] = "l:fj:b:hvgV";
+	static const char short_options[] = "o:fj:b:hvgV";
 
-	if (0) {
+	if (1) {
 		int i;
 
 		debug("argc = %d\n", argc);
@@ -161,24 +163,24 @@ static int opts_parse(struct opts *opts, int argc, char *argv[])
 			NULL);
 
 		if (c == EOF) {
-			//debug("  getopt_long: 'EOF'\n");
+			debug("  getopt_long: 'EOF'\n");
 			break;
 		}
-		//debug("  getopt_long: '%c'\n", c);
+		debug("  getopt_long: '%c'\n", c);
 
 		switch (c) {
-		case 'l': {
-			//debug("  b: %p = '%s'\n", optarg, optarg);
+		case 'o': {
+			debug("  o: %p = '%s'\n", optarg, optarg);
 
 			if (!optarg) {
 				fprintf(stderr,
-					"find-dupes: ERROR: Missing required argument <list_dir>.'\n");
+					"find-dupes: ERROR: Missing required argument <output_dir>.'\n");
 				opts->help = opt_yes;
 				return -1;
 			}
 
-			mem_free(opts->list_dir);
-			opts->list_dir = mem_strdup(optarg);
+			mem_free(opts->output_dir);
+			opts->output_dir = mem_strdup(optarg);
 			break;
 		}
 		case 'f':
@@ -226,7 +228,7 @@ static int opts_parse(struct opts *opts, int argc, char *argv[])
 		src_dir_add(&opts->src_dir_list, argv[optind]);
 	}
 
-	if (0) {
+	if (1) {
 		struct src_dir *sd;
 
 		list_for_each(&opts->src_dir_list, sd, list_entry) {
@@ -424,19 +426,19 @@ int main(int argc, char *argv[])
 		return EXIT_SUCCESS;
 	}
 
-	if (!opts.list_dir || !opts.list_dir[0]) {
+	if (!opts.output_dir || !opts.output_dir[0]) {
 		fprintf(stderr,
-			"find-dupes: ERROR: Missing required flag --list-dir.'\n");
+			"find-dupes: ERROR: Missing required flag --output-dir.'\n");
 		print_usage(&opts);
 		return EXIT_FAILURE;
 	}
 
-	if (access(opts.list_dir, F_OK)) {
-		result = mkdir(opts.list_dir, S_IRWXU | S_IRWXG | S_IRWXO);
+	if (access(opts.output_dir, F_OK)) {
+		result = mkdir(opts.output_dir, S_IRWXU | S_IRWXG | S_IRWXO);
 
 		if (result) {
 			fprintf(stderr, "ERROR: mkdir '%s' failed: %s\n",
-				opts.list_dir, strerror(errno));
+				opts.output_dir, strerror(errno));
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -459,7 +461,7 @@ int main(int argc, char *argv[])
 	if (0) {
 		char *log_path;
 
-		log_path = mem_strdupcat(opts.list_dir, "/find-dupes.log");
+		log_path = mem_strdupcat(opts.output_dir, "/find-dupes.log");
 		set_log_path(log_path);
 		mem_free(log_path);
 	}
@@ -526,7 +528,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (1) {
-		FILE *empty_fp = list_file_open(opts.list_dir, "/empty.lst");
+		FILE *empty_fp = list_file_open(opts.output_dir, "/empty.lst");
 
 		print_file_header_count(empty_fp, "Empty List",
 			list_item_count(&ht->extras));
@@ -537,7 +539,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (opts.file_list == opt_yes) {
-		FILE *files_fp = list_file_open(opts.list_dir, "/files.lst");
+		FILE *files_fp = list_file_open(opts.output_dir, "/files.lst");
 
 		print_file_header(files_fp, "Files List");
 
@@ -563,10 +565,10 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "find-dupes: Comparing %u files...\n",
 			total_count);
 
-		fps.dupes = list_file_open(opts.list_dir, "/dupes.lst");
+		fps.dupes = list_file_open(opts.output_dir, "/dupes.lst");
 		print_file_header(fps.dupes, "Dupes List");
 
-		fps.unique = list_file_open(opts.list_dir, "/unique.lst");
+		fps.unique = list_file_open(opts.output_dir, "/unique.lst");
 		print_file_header(fps.unique, "Unique List");
 
 		compare_files(wq, ht, check_for_signals, &fps);
@@ -615,7 +617,7 @@ exit_clean:
 		return EXIT_FAILURE;
 	}
 
-	fprintf(stderr, "find-dupes: Lists in '%s'.\n", opts.list_dir);
+	fprintf(stderr, "find-dupes: Lists in '%s'.\n", opts.output_dir);
 	print_result("Success", &timer);
 	return EXIT_SUCCESS;
 }
