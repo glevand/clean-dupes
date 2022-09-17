@@ -8,8 +8,6 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-const char *version_string;
-
 #define build_assert(_x) do {(void)sizeof(char[(_x) ? 1 : -1]);} while (0)
 unsigned int to_unsigned(const char *str);
 void print_current_time(FILE *fp);
