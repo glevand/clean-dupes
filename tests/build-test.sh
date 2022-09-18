@@ -24,6 +24,7 @@ on_err() {
 
 #===============================================================================
 export PS4='\[\e[0;33m\]+ ${BASH_SOURCE##*/}:${LINENO}:(${FUNCNAME[0]:-main}):\[\e[0m\] '
+
 script_name="${0##*/}"
 
 SECONDS=0
@@ -37,9 +38,11 @@ set -o nounset
 
 # TESTS_TOP="$(realpath "${BASH_SOURCE%/*}")"
 
-build_dir="${1}"
+build_dir="${1:-}"
+flag="${2:-}"
 
-if [[ "${build_dir}" == '-h' || "${build_dir}" == '--help' ]]; then
+if [[ "${build_dir}" == '-h' || "${build_dir}" == '--help' \
+	|| "${flag}" == '-h' || "${flag}" == '--help' ]]; then
         usage
         exit 0
 fi
