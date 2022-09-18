@@ -4,23 +4,25 @@ usage() {
 	local old_xtrace
 	old_xtrace="$(shopt -po xtrace || :)"
 	set +o xtrace
-	echo "${script_name} - Move duplicate files to a backup directory." >&2
-	echo "Usage: ${script_name} [flags] src-directory [src-directory]..." >&2
-	echo "Option flags:" >&2
-	echo "  -b --backup-dir - Backup directory. Default: '${backup_dir}'." >&2
-	echo "  -d --dupes-list - Dupes list file. Default: '${dupes_list}'." >&2
-	echo "  -m --moves-list - Moves list file. Default: '${moves_list}'." >&2
-	echo "  -k --keep-pos   - Moves list keep position {1, 2, last}.  Default: '${keep_pos}'." >&2
-	echo "  -h --help       - Show this help and exit." >&2
-	echo "  -v --verbose    - Verbose execution." >&2
-	echo "  -g --debug      - Extra verbose execution." >&2
-	echo "Option steps:" >&2
-	echo "  -1 --gen-dupes  - Find duplicate files and generate a dupes list.  Does not move files.  Default: '${gen_dupes}'." >&2
-	echo "  -2 --gen-moves  - Generate a moves list from a dupes list.  Does not move files.  Default: '${gen_moves}'." >&2
-	echo "  -3 --move-files - Move files in moves list to the backup directory.  Default: '${move_files}'." >&2
-	echo "${script_name} (@PACKAGE_NAME@) version @PACKAGE_VERSION@" >&2
-	echo "@PACKAGE_URL@" >&2
-	echo "Send bug reports to: Geoff Levand <geoff@infradead.org>." >&2
+
+	{
+		echo "${script_name} - Move duplicate files to a backup directory."
+		echo "Usage: ${script_name} [flags] src-directory [src-directory]..."
+		echo "Option flags:"
+		echo "  -b --backup-dir - Backup directory. Default: '${backup_dir}'."
+		echo "  -d --dupes-list - Dupes list file. Default: '${dupes_list}'."
+		echo "  -m --moves-list - Moves list file. Default: '${moves_list}'."
+		echo "  -k --keep-pos   - Moves list keep position {1, 2, last}.  Default: '${keep_pos}'."
+		echo "  -h --help       - Show this help and exit."
+		echo "  -v --verbose    - Verbose execution."
+		echo "  -g --debug      - Extra verbose execution."
+		echo "Option steps:"
+		echo "  -1 --gen-dupes  - Find duplicate files and generate a dupes list.  Does not move files.  Default: '${gen_dupes}'."
+		echo "  -2 --gen-moves  - Generate a moves list from a dupes list.  Does not move files.  Default: '${gen_moves}'."
+		echo "  -3 --move-files - Move files in moves list to the backup directory.  Default: '${move_files}'."
+		echo "Info:"
+		print_project_info
+	} >&2
 	eval "${old_xtrace}"
 }
 
@@ -29,23 +31,13 @@ process_opts() {
 	local long_opts="backup-dir:,dupes-list:,moves-list:,keep-pos:,help,\
 verbose,debug,gen-dupes,gen-moves,move-files"
 
-	backup_dir=''
-	dupes_list=''
-	moves_list=''
-	keep_pos=''
-	usage=''
-	verbose=''
-	gen_dupes=''
-	gen_moves=''
-	move_files=''
-
 	local opts
 	opts=$(getopt --options ${short_opts} --long ${long_opts} -n "${script_name}" -- "$@")
 
 	eval set -- "${opts}"
 
-	while : ; do
-		#Secho "${FUNCNAME[0]}: @${1}@ @${2}@"
+	while true ; do
+		# echo "${FUNCNAME[0]}: (${#}) '${*}'"
 		case "${1}" in
 		-b | --backup-dir)
 			backup_dir="${2}"
@@ -117,6 +109,16 @@ on_err() {
 
 	echo "${script_name}: ERROR: function=${f_name}, line=${line_no}, result=${err_no}" >&2
 	exit "${err_no}"
+}
+
+print_project_banner() {
+	echo "${script_name} (@PACKAGE_NAME@) - ${start_time}"
+}
+
+print_project_info() {
+	echo "  @PACKAGE_NAME@ ${script_name}"
+	echo "  Version: @PACKAGE_VERSION@"
+	echo "  Project Home: @PACKAGE_URL@"
 }
 
 sec_to_min() {
@@ -209,7 +211,7 @@ check_backup() {
 process_group() {
 	local group=("${@}")
 	local count="${#group[@]}"
-	#local debug=1
+	local debug=''
 
 	if [[ ${count} -eq 0 ]]; then
 		echo "${FUNCNAME[0]}: ERROR: Empty group." >&2
@@ -219,18 +221,26 @@ process_group() {
 	local i
 	if [[ "${keep_pos}" == "last" ]]; then
 		for ((i = 0; i < count - 1; i++)); do
-			[[ ${debug} ]] && echo "${FUNCNAME[0]}: Move (last) [$((i + 1))] '${group[i]}'" >&2
+			if [[ ${debug} ]]; then
+				echo "${FUNCNAME[0]}: Move (last) [$((i + 1))] '${group[i]}'" >&2
+			fi
 			echo "[$((i + 1))] ${group[i]}" >> "${moves_list}"
 		done
-		[[ ${debug} ]] && echo "${FUNCNAME[0]}: Keep (last) [$((i + 1))] '${group[i]}'" >&2
+		if [[ ${debug} ]]; then
+			echo "${FUNCNAME[0]}: Keep (last) [$((i + 1))] '${group[i]}'" >&2
+		fi
 		echo "# [$((i + 1))] ${group[i]}" >> "${moves_list}"
 	else
 		for ((i = 0; i < count; i++)); do
 			if [[ $((i + 1)) -ne ${keep_pos} ]]; then
-				[[ ${debug} ]] && echo "${FUNCNAME[0]}: Move (${keep_pos}) [$((i + 1))] '${group[i]}'" >&2
+				if [[ ${debug} ]]; then
+					echo "${FUNCNAME[0]}: Move (${keep_pos}) [$((i + 1))] '${group[i]}'" >&2
+				fi
 				echo "[$((i + 1))] ${group[i]}" >> "${moves_list}"
 			else
-				[[ ${debug} ]] && echo "${FUNCNAME[0]}: Keep (${keep_pos}) [$((i + 1))] '${group[i]}'" >&2
+				if [[ ${debug} ]]; then
+					echo "${FUNCNAME[0]}: Keep (${keep_pos}) [$((i + 1))] '${group[i]}'" >&2
+				fi
 				echo "# [$((i + 1))] ${group[i]}" >> "${moves_list}"
 			fi
 		done
@@ -239,10 +249,10 @@ process_group() {
 }
 
 generate_moves() {
-	declare -a group
+	local -a group=()
 	local line_in
 	local line_no=0
-	#local debug=1
+	local debug=''
 
 	echo "${script_name}: INFO: Generating moves list..." >&2
 
@@ -253,17 +263,23 @@ generate_moves() {
 		((line_no += 1))
 
 		if [[ "${line_in:0:1}" == "#" ]]; then
-			[[ ${debug} ]] && echo "${FUNCNAME[0]}:${line_no}: Skip '${line_in}'" >&2
+			if [[ ${debug} ]]; then
+				echo "${FUNCNAME[0]}:${line_no}: Skip '${line_in}'" >&2
+			fi
 			echo "${line_in}" >> "${moves_list}"
 			continue
 		fi
 
 		if [[ ! ${line_in} ]]; then
 			if [[ ${#group[@]} -eq 0 ]]; then
-				[[ ${debug} ]] && echo "${FUNCNAME[0]}:${line_no}: Empty group." >&2
+				if [[ ${debug} ]]; then
+					echo "${FUNCNAME[0]}:${line_no}: Empty group." >&2
+				fi
 				echo '' >> "${moves_list}"
 			else
-				[[ ${debug} ]] && echo "${FUNCNAME[0]}:${line_no}: Have group (${#group[@]})." >&2
+				if [[ ${debug} ]]; then
+					echo "${FUNCNAME[0]}:${line_no}: Have group (${#group[@]})." >&2
+				fi
 				process_group "${group[@]}"
 				group=()
 			fi
@@ -283,7 +299,9 @@ generate_moves() {
 		pos="${BASH_REMATCH[1]}"
 		file="${BASH_REMATCH[2]}"
 
-		[[ ${debug} ]] && echo "${FUNCNAME[0]}:${line_no}: [${pos}] = '${file}'" >&2
+		if [[ ${debug} ]]; then
+			echo "${FUNCNAME[0]}:${line_no}: [${pos}] = '${file}'" >&2
+		fi
 
 		group+=("${file}")
 
@@ -297,13 +315,15 @@ generate_moves() {
 move_files() {
 	local line_in
 	local line_no=0
-	#local debug=1
+	local debug=''
 
 	while read -r line_in; do
 		(( line_no = line_no + 1 ))
 
 		if [[ "${line_in:0:1}" == "#" || ! ${line_in} ]]; then
-			[[ ${debug} ]] && echo "${FUNCNAME[0]}:${line_no}: Skip '${line_in}'" >&2
+			if [[ ${debug} ]]; then
+				echo "${FUNCNAME[0]}:${line_no}: Skip '${line_in}'" >&2
+			fi
 			continue
 		fi
 
@@ -321,7 +341,9 @@ move_files() {
 		file="${BASH_REMATCH[2]}"
 		file="$(realpath "${file}")"
 
-		[[ ${debug} ]] && echo "${FUNCNAME[0]}:${line_no}: Move [${pos}] = '${file}'" >&2
+		if [[ ${debug} ]]; then
+			echo "${FUNCNAME[0]}:${line_no}: Move [${pos}] = '${file}'" >&2
+		fi
 
 		if [[ ! -e ${file} ]]; then
 			echo "${FUNCNAME[0]}:${line_no}: ERROR: No Such file: '${line_in}'" >&2
@@ -338,6 +360,7 @@ move_files() {
 
 #===============================================================================
 export PS4='\[\e[0;33m\]+ ${BASH_SOURCE##*/}:${LINENO}:(${FUNCNAME[0]:-main}):\[\e[0m\] '
+
 script_name="${0##*/}"
 
 # SCRIPTS_TOP=${SCRIPTS_TOP:-"$(cd "${BASH_SOURCE%/*}" && pwd)"}
@@ -354,7 +377,16 @@ set -o nounset
 
 find_dupes="${find_dupes:-find-dupes}"
 
-declare -a src_dirs
+backup_dir=''
+dupes_list=''
+moves_list=''
+keep_pos=''
+usage=''
+verbose=''
+gen_dupes=''
+gen_moves=''
+move_files=''
+declare -a src_dirs=()
 
 process_opts "${@}"
 
