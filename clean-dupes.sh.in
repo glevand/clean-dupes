@@ -128,7 +128,7 @@ sec_to_min() {
 	local frac_100=$(( (sec - min * 60) * 100 / 60 ))
 
 	if (( frac_10 != 0 )); then
-		unset frac_10
+		frac_10=''
 	fi
 
 	echo "${min}.${frac_10}${frac_100}"
@@ -417,7 +417,7 @@ if [[ ${gen_dupes} ]]; then
 	check_src_dirs "${src_dirs[@]}"
 
 	mkdir -p "${backup_dir}"
-	"${find_dupes}" --verbose --file-list --list-dir="${backup_dir}" "${src_dirs[@]}"
+	"${find_dupes}" --verbose --file-list --output-dir="${backup_dir}" "${src_dirs[@]}"
 
 	if [[ "${backup_dir}/dupes.lst" != "${dupes_list}" ]]; then
 		mv -f "${backup_dir}/dupes.lst" "${dupes_list}"
