@@ -23,7 +23,7 @@ Option flags:
   -b --backup-dir - Backup directory. Default: '/tmp/clean-dupes'.
   -d --dupes-list - Dupes list file. Default: '/tmp/clean-dupes/dupes.lst'.
   -m --moves-list - Moves list file. Default: '/tmp/clean-dupes/moves-keep-1.lst'.
-  -k --keep-pos   - Moves list keep position {1, 2, last}.  Default: '1'.
+  -k --keep-pos   - Moves list keep position {all, 1, 2, last}.  Default: 'all'.
   -h --help       - Show this help and exit.
   -v --verbose    - Verbose execution.
   -g --debug      - Extra verbose execution.
@@ -32,7 +32,7 @@ Option steps:
   -2 --gen-moves  - Generate a moves list from a dupes list.  Does not move files.  Default: '1'.
   -3 --move-files - Move files in moves list to the backup directory.  Default: ''.
 Info:
-  clean-dupes clean-dupes.sh
+  clean-dupes.sh (clean-dupes)
   Project Home: https://github.com/glevand/clean-dupes
 ```
 

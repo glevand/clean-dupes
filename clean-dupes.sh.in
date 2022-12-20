@@ -12,7 +12,7 @@ usage() {
 		echo "  -b --backup-dir - Backup directory. Default: '${backup_dir}'."
 		echo "  -d --dupes-list - Dupes list file. Default: '${dupes_list}'."
 		echo "  -m --moves-list - Moves list file. Default: '${moves_list}'."
-		echo "  -k --keep-pos   - Moves list keep position {1, 2, last}.  Default: '${keep_pos}'."
+		echo "  -k --keep-pos   - Moves list keep position {all, 1, 2, last}.  Default: '${keep_pos}'."
 		echo "  -h --help       - Show this help and exit."
 		echo "  -v --verbose    - Verbose execution."
 		echo "  -g --debug      - Extra verbose execution."
@@ -165,7 +165,7 @@ check_pos() {
 	local kp=${1}
 
 	case "${kp}" in
-	1 | 2 | last)
+	all | 1 | 2 | last)
 		;;
 	*)
 		echo "${script_name}: ERROR: Bad --keep-pos '${kp}'." >&2
@@ -219,7 +219,14 @@ process_group() {
 	fi
 
 	local i
-	if [[ "${keep_pos}" == "last" ]]; then
+	if [[ "${keep_pos}" == 'all' ]]; then
+		for ((i = 0; i < count; i++)); do
+			if [[ ${debug} ]]; then
+				echo "${FUNCNAME[0]}: Keep (all) [$((i + 1))] '${group[i]}'" >&2
+			fi
+			echo "# [$((i + 1))] ${group[i]}" >> "${moves_list}"
+		done
+	elif [[ "${keep_pos}" == 'last' ]]; then
 		for ((i = 0; i < count - 1; i++)); do
 			if [[ ${debug} ]]; then
 				echo "${FUNCNAME[0]}: Move (last) [$((i + 1))] '${group[i]}'" >&2
@@ -396,7 +403,7 @@ backup_dir="$(realpath "${backup_dir}")"
 dupes_list="${dupes_list:-${backup_dir}/dupes.lst}"
 dupes_list="$(realpath --canonicalize-missing "${dupes_list}")"
 
-keep_pos=${keep_pos:-1}
+keep_pos="${keep_pos:-all}"
 moves_list="${moves_list:-${dupes_list%/*}/moves-keep-${keep_pos}.lst}"
 moves_list="$(realpath --canonicalize-missing "${moves_list}")"
 
@@ -417,7 +424,7 @@ if [[ ${gen_dupes} ]]; then
 	check_src_dirs "${src_dirs[@]}"
 
 	mkdir -p "${backup_dir}"
-	"${find_dupes}" --verbose --file-list --output-dir="${backup_dir}" "${src_dirs[@]}"
+	"${find_dupes}" ${verbose:+--verbose} --file-list --output-dir="${backup_dir}" "${src_dirs[@]}"
 
 	if [[ "${backup_dir}/dupes.lst" != "${dupes_list}" ]]; then
 		mv -f "${backup_dir}/dupes.lst" "${dupes_list}"
