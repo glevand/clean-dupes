@@ -79,7 +79,7 @@ make install
 
 echo ''
 echo "--- show help ---"
-find "${build_dir}/install/bin" -name '*.sh' -print | sort | xargs -n1 -L1 -P1 -I {} bash -c '{} --help'
+find "${build_dir}/install/bin" -name '*.sh' -print | sort | xargs -P1 -I {} bash -c '{} --help'
 
 echo ''
 echo "--- Done ---"
