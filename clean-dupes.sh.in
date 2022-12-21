@@ -463,6 +463,6 @@ if [[ ${move_files} ]]; then
 	exit 0
 fi
 
-	echo "${script_name}: File lists generated in '${moves_list%/*}'."
-	trap $'on_exit "Success"' EXIT
+echo "${script_name}: File lists generated in '${moves_list%/*}'."
+trap $'on_exit "Success"' EXIT
 exit 0
