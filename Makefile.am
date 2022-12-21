@@ -58,7 +58,7 @@ EXTRA_DIST = bootstrap configure.ac COPYING m4 mit-plus-license.txt README.md \
 
 CLEANFILES = $(bin_SCRIPTS)
 
-MAINTAINERCLEANFILES = autom4te.cache aclocal.m4 compile config.* configure \
+MAINTAINERCLEANFILES = autom4te.cache aclocal.m4 compile config.* configure configure~ \
  depcomp install-sh ltmain.sh m4/*.m4 Makefile.in missing $(PACKAGE)-*.gz
 
 maintainer-clean-local:

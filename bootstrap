@@ -4,6 +4,8 @@ script_name="${0##*/}"
 
 echo "${script_name}: '$(pwd)'"
 
+mkdir -p m4
+
 progs="autoconf automake bash gettext libtoolize make pkg-config"
 for p in ${progs}; do
 	if ! test -x "$(command -v ${p})"; then
@@ -26,5 +28,4 @@ if [[ ${result} ]]; then
 	exit 1
 fi
 
-mkdir -p m4
 exec autoreconf --force --install ${@}
